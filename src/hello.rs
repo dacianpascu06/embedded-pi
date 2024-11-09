@@ -21,7 +21,7 @@ async fn main(spawner: Spawner) {
     // TODO 0 : Set the timer to (a)wait 5 seconds before printing
     //          the "Hello, World!" message.
 
-    // TODO 1 : Print the "Hello, World!" message to the USB serial port.
+    // TODO 1 : Print the "Hello, World!" message to the debugger.
 
     // TODO 2.2 : Spawn the task that blinks the LED connected to GPIO1.
 }
