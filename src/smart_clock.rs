@@ -21,8 +21,15 @@
 #![no_std]
 #![no_main]
 
+use core::fmt::Write;
+use core::write;
+use embedded_nov_2024::bmp280::*;
+use heapless::String;
+use heapless::*;
+
 use defmt::*;
 use embassy_executor::Spawner;
+use embassy_rp::i2c;
 use embassy_time::Timer;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
@@ -31,6 +38,8 @@ use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use embedded_graphics::text::Text;
 use embedded_graphics::Drawable;
+use embedded_nov_2024::bmp280::Oversampling::x2;
+use embedded_nov_2024::bmp280::{PowerMode, BMP280};
 use embedded_nov_2024::display::SPIDeviceInterface;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -91,16 +100,38 @@ async fn main(_spawner: Spawner) {
 
     // Write welcome message
     let style = MonoTextStyle::new(&FONT_7X13_BOLD, Rgb565::CYAN);
-    Text::new("Welcome to Rust Workshop!", Point::new(36, 190), style)
+    Text::new("hello!", Point::new(36, 190), style)
         .draw(&mut display)
         .unwrap();
 
     // Wait a bit
-    Timer::after_secs(10).await;
-
+    Timer::after_secs(1).await;
+    let sda = peripherals.PIN_20;
+    let scl = peripherals.PIN_21;
+    let config = embassy_rp::i2c::Config::default();
     // Clear display
+
     display.clear(Rgb565::BLACK).unwrap();
+
+    let i2c = i2c::I2c::new_blocking(peripherals.I2C0, scl, sda, config);
+    let mut sensor = BMP280::new(i2c).expect("error");
+    let c: Control = Control {
+        osrs_t: x2,
+        osrs_p: x2,
+        mode: PowerMode::Normal,
+    };
+    sensor.set_control(c);
+    let mut x = 0;
+
     loop {
-        Timer::after_secs(1).await;
+        let temperature = sensor.temp();
+        let mut string: String<30> = String::new();
+        x = x + 1;
+        write!(string, "{}  temp : {:.2}", x, temperature).unwrap();
+        Text::new(&string, Point::new(36, 50), style)
+            .draw(&mut display)
+            .unwrap();
+        Timer::after_secs(5).await;
+        display.clear(Rgb565::BLACK).unwrap();
     }
 }
